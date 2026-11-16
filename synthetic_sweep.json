@@ -1,0 +1,82 @@
+{
+  "source": "synthetic",
+  "columns": [
+    "time_s",
+    "vds_v",
+    "id_a"
+  ],
+  "runs": [
+    {
+      "id": "demo-47-ohm",
+      "capture": "synthetic_47ohm.csv",
+      "gate_resistance_ohm": 47,
+      "load_current_a": 2,
+      "vds_levels_v": [
+        0,
+        10
+      ],
+      "turn_on_s": [
+        0,
+        5e-08
+      ],
+      "turn_off_s": [
+        5e-08,
+        1e-07
+      ]
+    },
+    {
+      "id": "demo-10-ohm",
+      "capture": "synthetic_10ohm.csv",
+      "gate_resistance_ohm": 10,
+      "load_current_a": 2,
+      "vds_levels_v": [
+        0,
+        10
+      ],
+      "turn_on_s": [
+        0,
+        5e-08
+      ],
+      "turn_off_s": [
+        5e-08,
+        1e-07
+      ]
+    },
+    {
+      "id": "demo-47-ohm-repeat",
+      "capture": "synthetic_47ohm_repeat.csv",
+      "gate_resistance_ohm": 47,
+      "load_current_a": 2,
+      "vds_levels_v": [
+        0,
+        10
+      ],
+      "turn_on_s": [
+        0,
+        5e-08
+      ],
+      "turn_off_s": [
+        5e-08,
+        1e-07
+      ]
+    },
+    {
+      "id": "demo-10-ohm-repeat",
+      "capture": "synthetic_10ohm_repeat.csv",
+      "gate_resistance_ohm": 10,
+      "load_current_a": 2,
+      "vds_levels_v": [
+        0,
+        10
+      ],
+      "turn_on_s": [
+        0,
+        5e-08
+      ],
+      "turn_off_s": [
+        5e-08,
+        1e-07
+      ]
+    }
+  ]
+}
