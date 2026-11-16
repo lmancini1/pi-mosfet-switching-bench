@@ -124,8 +124,8 @@ def render_report(manifest):
     rows = [row for row, _, _ in runs]
     synthetic = rows[0]["source"] == "synthetic"
     provenance = (
-        "Synthetic demonstration · artificial input waveforms"
-        if synthetic else "Measured sweep · scope captures supplied by the operator"
+        "Synthetic example · not bench measurements"
+        if synthetic else "Measured sweep · supplied scope captures"
     )
     fields = {
         "run_id": "Run",
@@ -154,7 +154,7 @@ def render_report(manifest):
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRLZ44N switching characterization</title>
+<title>IRLZ44N switching results</title>
 <style>
 body {{ max-width: 68rem; padding: 1.5rem; margin: auto; color: #172833;
        font: 1rem/1.5 system-ui, sans-serif; background: #f8fafb; }}
@@ -168,14 +168,14 @@ th, td {{ padding: .5rem; border-bottom: 1px solid #d8e1e5; text-align: right; }
 th:first-child, td:first-child {{ text-align: left; }}
 </style>
 <main>
-<h1>IRLZ44N switching characterization</h1>
+<h1>IRLZ44N switching results</h1>
 <p class="provenance">{provenance}</p>
 <h2>Sweep results</h2>
 <div class="table-wrap"><table><thead><tr>{headings}<th scope="col">Sampling</th></tr></thead><tbody>{body}</tbody></table></div>
 <p>Each point represents one capture. Energy integrates signed VDS × ID over the full
 operator-selected window. A dash in the energy columns indicates a missing current channel.</p>
 <p>{review_count} of {len(rows)} runs contain an edge with fewer than {MIN_EDGE_SAMPLES}
-acquired samples between its threshold crossings. Review marks a screening heuristic.
+acquired samples between its threshold crossings. The Review flag is a sampling check, not an accuracy estimate.
 Flagged runs remain visible in the tables and plots.</p>
 {plot_comparison(rows)}
 <h2>Repeatability by test condition</h2>
