@@ -1,10 +1,10 @@
 # IRLZ44N bench record
 
-## Question
+## Test aim
 
-At a fixed load and unchanged fixture, how does gate resistance affect VDS
-transition time and peak turn-off VDS? Include window energy if calibrated,
-time-aligned drain current is available.
+Measure how gate resistance affects VDS transition time and peak turn-off VDS
+at a fixed load. Keep the rest of the fixture unchanged. Include window energy
+if calibrated, time-aligned drain current is available.
 
 ## Fixture and instrument record
 
@@ -38,7 +38,7 @@ time-aligned drain current is available.
 5. Generate the CSV and HTML report. Save the scope exports, manifest, GPIO
    check, fixture details and report together.
 
-## Results to fill in after testing
+## Results
 
 - Measured GPIO frequency and duty cycle
 - Conditions compared and capture count per condition

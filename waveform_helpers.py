@@ -28,10 +28,13 @@ def crossing_time(
     lo = 0 if t_start is None else int(np.searchsorted(t, t_start, side="left"))
     hi = len(t) if t_stop is None else int(np.searchsorted(t, t_stop, side="right"))
     ys = y[lo:hi] - level
+    # Include a window that starts exactly on the threshold and departs in
+    # the requested direction, without counting a flat threshold plateau.
     if direction == "rising":
-        idx = np.nonzero((ys[:-1] < 0) & (ys[1:] >= 0))[0]
+        crosses = ((ys[:-1] < 0) & (ys[1:] >= 0)) | ((ys[:-1] == 0) & (ys[1:] > 0))
     else:
-        idx = np.nonzero((ys[:-1] > 0) & (ys[1:] <= 0))[0]
+        crosses = ((ys[:-1] > 0) & (ys[1:] <= 0)) | ((ys[:-1] == 0) & (ys[1:] < 0))
+    idx = np.nonzero(crosses)[0]
     if idx.size == 0:
         raise ExtractionError(f"no {direction} crossing of {level:.4g} in [{t_start}, {t_stop}]")
     k = lo + int(idx[0])

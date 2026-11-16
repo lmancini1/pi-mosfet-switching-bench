@@ -20,6 +20,13 @@ class Burst:
         return self.high_us + self.low_us
 
 
+def checked(result):
+    """pigpio can return negative status codes when exceptions are disabled."""
+    if result < 0:
+        raise RuntimeError(f"pigpio returned error code {result}")
+    return result
+
+
 def emit(burst, pigpio):
     pi = pigpio.pi("localhost")
     with ExitStack() as cleanup:
@@ -29,22 +36,22 @@ def emit(burst, pigpio):
         if pi.wave_tx_busy():
             raise RuntimeError("pigpiod is already transmitting a wave")
 
-        pi.write(burst.gpio, 0)
-        pi.wave_add_new()
+        checked(pi.write(burst.gpio, 0))
+        checked(pi.wave_add_new())
         mask = 1 << burst.gpio
-        pi.wave_add_generic([
+        checked(pi.wave_add_generic([
             pigpio.pulse(mask, 0, burst.high_us),
             pigpio.pulse(0, mask, burst.low_us),
-        ])
-        wave_id = pi.wave_create()
+        ]))
+        wave_id = checked(pi.wave_create())
         cleanup.callback(pi.wave_delete, wave_id)
         # On abort, stop DMA and drive low before trying to delete its wave.
         cleanup.callback(pi.write, burst.gpio, 0)
         cleanup.callback(pi.wave_tx_stop)
         if burst.cycles == 1:
-            pi.wave_send_once(wave_id)
+            checked(pi.wave_send_once(wave_id))
         else:
-            pi.wave_chain([255, 0, wave_id, 255, 1, burst.cycles & 255, burst.cycles >> 8])
+            checked(pi.wave_chain([255, 0, wave_id, 255, 1, burst.cycles & 255, burst.cycles >> 8]))
 
         deadline = time.monotonic() + burst.period_us * burst.cycles / 1e6 + 2
         while pi.wave_tx_busy():

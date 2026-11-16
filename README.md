@@ -1,111 +1,123 @@
-# Raspberry Pi IRLZ44N switching bench
+# Raspberry Pi MOSFET switching bench
 
-## Generate a finite GPIO burst
+Tools for running a finite GPIO burst and analyzing oscilloscope captures from
+an IRLZ44N switching fixture. The analysis reports VDS transition times,
+turn-off voltage peaks, and window energy when a drain-current channel is present.
 
-Preview the requested timing on any computer with Python 3.10+:
+The included CSV files are **synthetic examples**, not measurements of an IRLZ44N.
+No hardware results are included. Use [BENCH_RECORD.md](BENCH_RECORD.md) to record
+your fixture and test conditions.
+
+## Try the analysis
+
+Run these commands from the repository directory with Python 3.10 or newer:
 
 ```sh
-python run_burst.py --gpio 18 --high-us 10 --low-us 10 --cycles 10000
+python -m pip install -r requirements-report.txt
+python summarize_sweep.py synthetic_sweep.json > sweep.csv
+python report_sweep.py synthetic_sweep.json > switching_report.html
 ```
 
-This plans a 50 kHz, 50% duty-cycle burst lasting 0.2 s. The GPIO number is
-illustrative. Choose the BCM channel wired to your test fixture.
-
-For GPIO output, use a Pi supported by your installed pigpio release, install
-its Python module, and start the local pigpiod daemon. Use the daemon
-exclusively for the burst. Test with the switching stage disconnected first
-and verify the GPIO waveform on the scope. The active-high GPIO output is a
-logic signal for a gate-driver input. Use a separate gate driver and a hardware
-default-off input for an energized fixture.
-
-To emit the verified burst and record the requested settings, add
-`--emit > burst.json`. Export your scope capture separately and run the
-analyzer below. The burst JSON records requested GPIO timing. The waveform
-CSV is the input for measuring device transition times.
-
-## Analyze the oscilloscope capture
-
-Python post-processing for a Raspberry Pi-controlled switching rig. It takes an
-oscilloscope CSV and reports drain-source voltage (VDS) transition times. Your
-existing GPIO script can continue to run the test. This program runs after
-capture and can run on the Pi or on another computer.
-
-### Run
-
-Install Python 3.10+ and NumPy 2.x. Export time in seconds and VDS in volts. If
-available, include a calibrated and time-aligned drain-current channel in amperes,
-with positive current into the drain. Use `--time-column`, `--vds-column` and
-`--id-column` to select your scope's headers, and `--skip-rows` to skip any
-preamble before the header.
-
-Example with illustrative levels and edge windows. Use the levels and windows
-from your own capture.
+Open `switching_report.html` in a browser. The report contains individual results,
+comparisons by gate resistance and load setting, repeat statistics, and annotated
+waveforms. [synthetic_report.html](synthetic_report.html) is a prebuilt example.
+For CSV and JSON analysis only, NumPy 2.x is enough:
 
 ```sh
 python -m pip install 'numpy>=2,<3'
+```
+
+## Analyze a scope capture
+
+Export time in seconds and drain-source voltage (VDS) in volts. An optional
+drain-current channel must be in amperes, with positive current into the drain.
+Calibrate and time-align the voltage and current channels before using energy results.
+
+This example assumes headers named `time_s`, `vds_v`, and `id_a`. Replace the
+plateau levels and time windows with values from your capture:
+
+```sh
 python analyze_capture.py capture.csv --vds-low 0.1 --vds-high 5 \
   --turn-on 0.000001 0.000002 --turn-off 0.000010 0.000011 \
   --id-column id_a > run.json
 ```
 
+Omit `--id-column` if you have no current channel. Use `--time-column` and
+`--vds-column` for other headers, or `--skip-rows N` for lines before the header.
+Samples must be finite, with strictly increasing timestamps.
+
 Choose one clean transition per window. For a low-side MOSFET, VDS falls at
-turn-on and rises at turn-off. The output gives 90%–10% and 10%–90% VDS edge
-durations, respectively. These are voltage transition metrics. Compare them with
-datasheet values only when the signal, thresholds, and test conditions match.
+turn-on and rises at turn-off. The script measures 90%–10% fall time and
+10%–90% rise time relative to the supplied low and high plateaus. These are VDS
+transition times; compare them with datasheet figures only when the signals,
+thresholds, and test conditions match.
 
-With a current channel, the script also reports the signed integral of
-VDS × ID over each full supplied window. This approximate energy in µJ depends
-on window placement, probe alignment, and current calibration. The scope's
-sample rate and analog bandwidth determine which transition times it can resolve.
+With a current channel, energy is the signed integral of VDS × ID over the
+**entire selected window**, reported in µJ. It depends on the window boundaries,
+probe alignment, and calibration; it is not automatically a datasheet switching-loss
+measurement. Sample rate and analog bandwidth also limit the transitions you can resolve.
 
-## Compare a gate-resistance and load sweep
+## Compare several captures
 
-```sh
-python summarize_sweep.py examples/synthetic_sweep.json > sweep.csv
-```
+Copy [synthetic_sweep.json](synthetic_sweep.json) as a starting point. Keep capture
+paths relative to the manifest and set `source` to `measured` for bench data.
+Each run needs a unique ID and a separate capture file, plus:
 
-The example uses artificial ramps to exercise the analysis. Copy the manifest to
-start a bench sweep. Set `source` to `measured` for your actual scope captures.
-Each run records its capture path (relative to the manifest), gate resistance
-in ohms, set load current in amperes, VDS plateau levels and two edge windows.
-Use a unique run ID for each repeat and record the load setting separately from
-the optional instantaneous ID waveform channel.
+- `gate_resistance_ohm` and `load_current_a`: the test settings.
+- `vds_levels_v`: low and high VDS plateaus in volts.
+- `turn_on_s` and `turn_off_s`: nonoverlapping analysis windows in seconds.
 
-The summary is sorted by gate resistance and load. Without an ID channel,
-energy cells are blank. A failed capture exits with a run number and produces
-no comparison rows. Keep the raw captures and manifest beside any published
-summary so the results can be reproduced.
-
-## Build the characterization report
-
-Install the report dependency and generate a self-contained HTML file:
+The manifest's `columns` list gives the time, VDS, and optional current headers,
+in that order. The load setting is recorded separately from the instantaneous
+current waveform. Keep fixture and acquisition settings consistent across a sweep.
 
 ```sh
-python -m pip install -r requirements-report.txt
-python report_sweep.py examples/synthetic_sweep.json > switching_report.html
+python summarize_sweep.py my_sweep.json > sweep.csv
+python report_sweep.py my_sweep.json > switching_report.html
 ```
 
-Open the HTML in a browser. It includes the run-by-run results, a comparison
-across load settings, and scope traces marked at the exact interpolated
-threshold crossings. The run details report sample spacing through each edge
-so you can judge how well the scope samples the transition. The synthetic
-report is an example of the workflow. Use your scope exports to generate
-a report of bench results.
+Results are sorted by gate resistance, load setting, and run ID. Energy cells
+are blank when there is no current channel. Invalid captures stop processing
+before any CSV rows or HTML are written.
 
-## Run a documented bench campaign
+The report groups repeats by resistance and load, showing the mean and sample
+standard deviation when two or more captures are available. Turn-off peak is the
+highest VDS in the selected turn-off window; overshoot is its excess above the
+high plateau, floored at zero. Include the transient in that window to compare peaks.
 
-Use [BENCH_RECORD.md](BENCH_RECORD.md) to record the as-built fixture, scope
-setup and GPIO verification. The report groups repeat acquisitions by gate
-resistance and load setting and shows the sample standard deviation for conditions
-with multiple acquisitions. It also reports the highest VDS within each
-turn-off window and how far that peak exceeds the supplied high VDS plateau.
-The report flags edges with fewer than five acquired samples between the
-crossings as a screening heuristic. Flagged runs remain in the summary so
-you can inspect their traces and decide whether to reacquire them. Use the same fixture and scope setup across a sweep so the
-grouping reflects comparable conditions.
+Edges with fewer than five acquired samples between threshold crossings are
+marked for review. This is a screening rule, not an accuracy guarantee. Inspect
+the traces and sampling intervals before deciding whether to reacquire them.
+Save raw captures, the manifest, and the bench record with your results.
 
-## Source
+## Generate a GPIO burst
+
+Preview the timing without GPIO hardware:
+
+```sh
+python run_burst.py --gpio 18 --high-us 10 --low-us 10 --cycles 10000
+```
+
+This requests a 50 kHz burst at 50% duty cycle, lasting 0.2 s. `--gpio` uses BCM
+numbering; select the channel wired to your fixture.
+
+To emit it, use a Pi supported by your pigpio release, install the `pigpio`
+Python module, and start the local `pigpiod` daemon. The script requires exclusive
+use of the daemon's waveform transmitter. First disconnect the switching stage
+and verify the GPIO waveform on a scope. The active-high GPIO signal is intended
+for a separate gate-driver input, with a hardware default-off state for the fixture.
+
+After verifying the setup, add `--emit > burst.json` to the preview command.
+The JSON records requested timing, not measured timing. Export the scope capture
+separately to measure GPIO timing or device transitions.
+
+## Checks
+
+Run the regression tests with `python -m unittest -v`. GPIO tests use a mock
+daemon; they do not verify timing or electrical behavior on a Pi.
+
+## Attribution
 
 The crossing and integration helpers are adapted from chad416's
 [sic-double-pulse-test](https://github.com/chad416/sic-double-pulse-test),
-`src/dpt/extract.py`. See the included MIT license for attribution.
+`src/dpt/extract.py`. See [LICENSE](LICENSE) for attribution.
